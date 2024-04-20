@@ -1,6 +1,8 @@
-Hashsync
+# HashSync
 
-# Usage
+Synchronized hashmaps to index your data!
+
+## Usage
 
 ```rust
 let mut hs = HashSync::new();
@@ -22,6 +24,6 @@ Time complexity:
 - Adding new indexes is `O(n)` where `n` is the current number of rows.
 - Insertions are amortized `O(n)` where `n` is the number of indexes.
 
-# Future optimizations
+## Future optimizations
 - Reduce copying
 - Drop indexes that are no longer in use
