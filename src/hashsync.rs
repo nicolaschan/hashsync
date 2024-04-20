@@ -9,13 +9,13 @@ use crate::{
     index::{Index, IndexRead, Indexable},
 };
 
-pub struct HashSync<RowT> {
+pub struct HashSync<'a, RowT> {
     rows: Arc<RwLock<HashMap<RowId, RowT>>>,
     next_id: RowId,
-    indexes: Vec<Box<dyn Indexable<RowT>>>,
+    indexes: Vec<Box<dyn Indexable<RowT> + 'a>>,
 }
 
-impl<RowT: Clone + 'static> HashSync<RowT> {
+impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn new() -> Self {
         HashSync {
             rows: Arc::new(RwLock::new(HashMap::new())),
@@ -49,7 +49,7 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
     pub fn index<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&RowT) -> IndexKeyT + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
         let mut index = Index::new(Box::new(index_fn));
         let rows_guard = self.rows.read().unwrap();
