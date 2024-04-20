@@ -25,5 +25,5 @@ Time complexity:
 - Insertions are amortized `O(n)` where `n` is the number of indexes.
 
 ## Future optimizations
-- Reduce copying
+- Reduce copying (drop `Clone` requirement on `RowT`?)
 - Drop indexes that are no longer in use
