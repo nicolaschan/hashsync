@@ -61,6 +61,18 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         IndexFn: Fn(&RowT) -> IndexKeyT + 'static,
         IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
+        let index_many_fn = move |row: &RowT| vec![index_fn(row)];
+        self.index_many(index_many_fn)
+    }
+
+    pub fn index_many<IndexKeyT, IndexFn>(
+        &mut self,
+        index_fn: IndexFn,
+    ) -> IndexRead<IndexKeyT, RowT>
+    where
+        IndexFn: Fn(&RowT) -> Vec<IndexKeyT> + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
+    {
         let mut index = Index::new(Box::new(index_fn));
         let rows_guard = self.rows.read().unwrap();
         for row in rows_guard.iter() {
@@ -195,5 +207,44 @@ mod tests {
         let rows2 = index2.get_values(&2);
         assert_eq!(rows2.len(), 1);
         assert!(rows2.contains(&(3, 2)));
+    }
+
+    #[test]
+    fn index_many() {
+        let mut hs = HashSync::new();
+        hs.insert((1, 2));
+        hs.insert((1, 3));
+        hs.insert((3, 1));
+        let index = hs.index_many(|&(a, b)| vec![a, b]);
+
+        let rows1 = index.get_values(&1);
+        assert_eq!(rows1.len(), 3);
+        assert!(rows1.contains(&(1, 2)));
+        assert!(rows1.contains(&(1, 3)));
+        assert!(rows1.contains(&(3, 1)));
+
+        let rows2 = index.get_values(&3);
+        assert_eq!(rows2.len(), 2);
+        assert!(rows2.contains(&(1, 3)));
+        assert!(rows2.contains(&(3, 1)));
+    }
+
+    #[test]
+    fn index_many_with_removal() {
+        let mut hs = HashSync::new();
+        let row_to_delete = hs.insert((1, 2));
+        hs.insert((1, 3));
+        hs.insert((3, 1));
+        let index = hs.index_many(|&(a, b)| vec![a, b]);
+
+        hs.delete(row_to_delete);
+
+        let rows1 = index.get_values(&2);
+        assert_eq!(rows1.len(), 0);
+
+        let rows2 = index.get_values(&1);
+        assert_eq!(rows2.len(), 2);
+        assert!(rows2.contains(&(1, 3)));
+        assert!(rows2.contains(&(3, 1)));
     }
 }
