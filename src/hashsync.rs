@@ -26,13 +26,17 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
 
     pub fn insert(&mut self, row: RowT) -> RowId {
         let id = self.next_id;
+        self.insert_at(id, row);
+        self.next_id = self.next_id.next();
+        id
+    }
+
+    fn insert_at(&mut self, id: RowId, row: RowT) {
         let mut rows_guard = self.rows.write().unwrap();
         for index in self.indexes.iter_mut() {
             index.insert(Indexed::new(id, row.clone()));
         }
         rows_guard.insert(id, row);
-        self.next_id = self.next_id.next();
-        id
     }
 
     pub fn delete(&mut self, id: RowId) {
@@ -44,6 +48,11 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
             }
         }
         rows_guard.remove(&id);
+    }
+
+    pub fn replace(&mut self, id: RowId, row: RowT) {
+        self.delete(id);
+        self.insert_at(id, row);
     }
 
     pub fn index<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
@@ -158,6 +167,32 @@ mod tests {
         let rows2 = index2.get_values(&2);
         assert_eq!(rows2.len(), 2);
         assert!(rows2.contains(&(1, 2)));
+        assert!(rows2.contains(&(3, 2)));
+    }
+
+    #[test]
+    fn replace() {
+        let mut hs = HashSync::new();
+        let row_to_replace = hs.insert((1, 2));
+        hs.insert((1, 3));
+        hs.insert((3, 2));
+        let index1 = hs.index(|&(a, _b)| a);
+        let index2 = hs.index(|&(_a, b)| b);
+
+        hs.replace(row_to_replace, (1, 4));
+
+        let rows1 = index1.get_values(&1);
+        assert_eq!(rows1.len(), 2);
+        assert!(rows1.contains(&(1, 3)));
+        assert!(rows1.contains(&(1, 4)));
+
+        let rows1_keys = index1.get(&1).iter().map(|i| i.id()).collect::<Vec<_>>();
+        assert_eq!(rows1_keys.len(), 2);
+        assert!(rows1_keys.contains(&row_to_replace));
+        assert!(rows1_keys.contains(&row_to_replace.next()));
+
+        let rows2 = index2.get_values(&2);
+        assert_eq!(rows2.len(), 1);
         assert!(rows2.contains(&(3, 2)));
     }
 }
