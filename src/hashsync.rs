@@ -51,6 +51,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     }
 
     pub fn replace(&mut self, id: RowId, row: RowT) {
+        // TODO: Lock write guard here to prevent race conditions with reads
         self.delete(id);
         self.insert_at(id, row);
     }
