@@ -1,4 +1,5 @@
 use std::{
+    cmp::max,
     collections::HashMap,
     hash::Hash,
     sync::{Arc, RwLock},
@@ -54,6 +55,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         // TODO: Lock write guard here to prevent race conditions with reads
         self.delete(id);
         self.insert_at(id, row);
+        self.next_id = max(id.next(), self.next_id);
     }
 
     pub fn index<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
@@ -246,5 +248,14 @@ mod tests {
         assert_eq!(rows2.len(), 2);
         assert!(rows2.contains(&(1, 3)));
         assert!(rows2.contains(&(3, 1)));
+    }
+
+    #[test]
+    fn replace_increases_max_id() {
+        let mut hs = HashSync::new();
+        hs.replace(RowId::new(5), (1, 4));
+
+        let row_id = hs.insert((1, 2));
+        assert_eq!(row_id, RowId::new(6));
     }
 }
