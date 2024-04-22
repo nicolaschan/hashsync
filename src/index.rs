@@ -40,6 +40,10 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
         self.index.get(key).cloned().unwrap_or_default()
     }
 
+    pub fn keys(&self) -> Vec<&KeyT> {
+        self.index.keys().collect()
+    }
+
     pub fn into_read_write(
         self,
         rows: Arc<RwLock<HashMap<RowId, ValueT>>>,
@@ -105,6 +109,13 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> IndexRead<KeyT, ValueT> {
     pub fn get_values(&self, key: &KeyT) -> Vec<ValueT> {
         let indexed = self.get(key);
         indexed.into_iter().map(|i| i.value().clone()).collect()
+    }
+}
+
+impl<KeyT: PartialEq + Eq + Hash + Clone, ValueT: Clone> IndexRead<KeyT, ValueT> {
+    pub fn keys(&self) -> Vec<KeyT> {
+        let index_guard = self.index.read().unwrap();
+        index_guard.keys().into_iter().cloned().collect()
     }
 }
 

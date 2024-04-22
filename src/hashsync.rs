@@ -258,4 +258,18 @@ mod tests {
         let row_id = hs.insert((1, 2));
         assert_eq!(row_id, RowId::new(6));
     }
+
+    #[test]
+    fn index_keys() {
+        let mut hs = HashSync::new();
+        hs.insert((1, 2));
+        hs.insert((1, 3));
+        hs.insert((3, 1));
+        let index = hs.index(|&(a, _b)| a);
+
+        let keys = index.keys();
+        assert_eq!(keys.len(), 2);
+        assert!(keys.contains(&1));
+        assert!(keys.contains(&3));
+    }
 }
