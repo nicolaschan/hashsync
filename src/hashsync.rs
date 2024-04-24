@@ -299,6 +299,20 @@ mod tests {
     }
 
     #[test]
+    fn index_keys_after_removal() {
+        let mut hs = HashSync::new();
+        let row_to_delete = hs.insert((1, 2));
+        hs.insert((3, 1));
+        let index = hs.index(|&(a, _b)| a);
+
+        hs.delete(row_to_delete);
+
+        let keys = index.keys();
+        assert_eq!(keys.len(), 1);
+        assert!(keys.contains(&3));
+    }
+
+    #[test]
     fn drop_indexes() {
         let mut hs = HashSync::new();
         let id1 = hs.insert((1, 2));

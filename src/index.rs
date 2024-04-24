@@ -70,6 +70,9 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, Valu
         for key in keys {
             if let Some(set) = self.index.get_mut(&key) {
                 set.remove(&row.id());
+                if set.is_empty() {
+                    self.index.remove(&key);
+                }
             }
         }
     }
