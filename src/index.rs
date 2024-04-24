@@ -24,12 +24,12 @@ pub trait Indexable<ValueT> {
 }
 
 pub struct Index<KeyT, ValueT> {
-    index_function: Box<dyn Fn(&ValueT) -> Vec<KeyT>>,
+    index_function: Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>,
     index: HashMap<KeyT, HashSet<RowId>>,
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
-    pub fn new(index_function: Box<dyn Fn(&ValueT) -> Vec<KeyT>>) -> Self {
+    pub fn new(index_function: Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>) -> Self {
         Index {
             index_function,
             index: HashMap::new(),
@@ -55,7 +55,7 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, ValueT> {
     fn insert(&mut self, row: Indexed<ValueT>) -> IndexId {
-        let keys = (self.index_function)(&row.value());
+        let keys = (self.index_function)(&row);
         for key in keys {
             self.index
                 .entry(key)
@@ -66,7 +66,7 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, Valu
     }
 
     fn delete(&mut self, row: Indexed<ValueT>) {
-        let keys = (self.index_function)(&row.value());
+        let keys = (self.index_function)(&row);
         for key in keys {
             if let Some(set) = self.index.get_mut(&key) {
                 set.remove(&row.id());

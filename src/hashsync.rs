@@ -80,6 +80,27 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         IndexFn: Fn(&RowT) -> Vec<IndexKeyT> + 'static,
         IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
+        let index_id_many_fn = move |indexed: &Indexed<RowT>| index_fn(indexed.value());
+        self.index_id_many(index_id_many_fn)
+    }
+
+    pub fn index_id<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
+    where
+        IndexFn: Fn(&Indexed<RowT>) -> IndexKeyT + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
+    {
+        let index_many_fn = move |indexed: &Indexed<RowT>| vec![index_fn(indexed)];
+        self.index_id_many(index_many_fn)
+    }
+
+    pub fn index_id_many<IndexKeyT, IndexFn>(
+        &mut self,
+        index_fn: IndexFn,
+    ) -> IndexRead<IndexKeyT, RowT>
+    where
+        IndexFn: Fn(&Indexed<RowT>) -> Vec<IndexKeyT> + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
+    {
         let mut index = Index::new(Box::new(index_fn));
         let rows_guard = self.rows.read().unwrap();
         for row in rows_guard.iter() {
@@ -131,6 +152,21 @@ mod tests {
         assert!(rows.contains(&(1, 2)));
         assert!(rows.contains(&(1, 3)));
         assert!(rows.contains(&(1, 4)));
+    }
+
+    #[test]
+    fn index_id() {
+        let mut hs = HashSync::new();
+        let row_id = hs.insert((1, 2));
+        hs.insert((1, 3));
+        hs.insert((3, 4));
+        let index = hs.index_id(|indexed| (indexed.id(), indexed.value().0));
+
+        let rows = index.get_values(&(row_id, 1));
+        assert_eq!(rows.len(), 1);
+        assert!(rows.contains(&(1, 2)));
+        let rows = index.get_values(&(row_id, 2));
+        assert_eq!(rows.len(), 0);
     }
 
     #[test]
