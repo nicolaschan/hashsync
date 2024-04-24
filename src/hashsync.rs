@@ -89,6 +89,14 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         self.indexes.push(Box::new(index_write));
         index_read
     }
+
+    pub fn drop_indexes(self) -> Self {
+        HashSync {
+            rows: self.rows,
+            next_id: self.next_id,
+            indexes: Vec::new(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -288,5 +296,19 @@ mod tests {
         assert_eq!(keys.len(), 2);
         assert!(keys.contains(&1));
         assert!(keys.contains(&3));
+    }
+
+    #[test]
+    fn drop_indexes() {
+        let mut hs = HashSync::new();
+        let id1 = hs.insert((1, 2));
+        let id2 = hs.insert((1, 3));
+        let id3 = hs.insert((3, 1));
+        let _index = hs.index(|&(a, _b)| a);
+
+        let hs = hs.drop_indexes();
+        assert_eq!(hs.by_id(id1), Some((1, 2)));
+        assert_eq!(hs.by_id(id2), Some((1, 3)));
+        assert_eq!(hs.by_id(id3), Some((3, 1)));
     }
 }
