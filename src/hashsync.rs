@@ -25,6 +25,11 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         }
     }
 
+    pub fn by_id(&self, id: RowId) -> Option<RowT> {
+        let rows_guard = self.rows.read().unwrap();
+        rows_guard.get(&id).cloned()
+    }
+
     pub fn insert(&mut self, row: RowT) -> RowId {
         let id = self.next_id;
         self.insert_at(id, row);
@@ -118,6 +123,18 @@ mod tests {
         assert!(rows.contains(&(1, 2)));
         assert!(rows.contains(&(1, 3)));
         assert!(rows.contains(&(1, 4)));
+    }
+
+    #[test]
+    fn get_by_id() {
+        let mut hs = HashSync::new();
+        let row1 = hs.insert((1, 2));
+        let row2 = hs.insert((1, 3));
+        let row3 = hs.insert((3, 4));
+
+        assert_eq!(hs.by_id(row1), Some((1, 2)));
+        assert_eq!(hs.by_id(row2), Some((1, 3)));
+        assert_eq!(hs.by_id(row3), Some((3, 4)));
     }
 
     #[test]
