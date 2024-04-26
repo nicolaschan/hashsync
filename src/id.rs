@@ -11,6 +11,7 @@ impl RowId {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Indexed<T> {
     id: RowId,
     value: T,

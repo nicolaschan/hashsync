@@ -30,6 +30,10 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         rows_guard.get(&id).cloned()
     }
 
+    pub fn by_id_indexed(&self, id: RowId) -> Option<Indexed<RowT>> {
+        self.by_id(id).map(|row| Indexed::new(id, row))
+    }
+
     pub fn insert(&mut self, row: RowT) -> RowId {
         let id = self.next_id;
         self.insert_at(id, row);
@@ -170,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn get_by_id() {
+    fn by_id() {
         let mut hs = HashSync::new();
         let row1 = hs.insert((1, 2));
         let row2 = hs.insert((1, 3));
@@ -179,6 +183,18 @@ mod tests {
         assert_eq!(hs.by_id(row1), Some((1, 2)));
         assert_eq!(hs.by_id(row2), Some((1, 3)));
         assert_eq!(hs.by_id(row3), Some((3, 4)));
+    }
+
+    #[test]
+    fn by_id_indexed() {
+        let mut hs = HashSync::new();
+        let row1 = hs.insert((1, 2));
+        let row2 = hs.insert((1, 3));
+        let row3 = hs.insert((3, 4));
+
+        assert_eq!(hs.by_id_indexed(row1), Some(Indexed::new(row1, (1, 2))));
+        assert_eq!(hs.by_id_indexed(row2), Some(Indexed::new(row2, (1, 3))));
+        assert_eq!(hs.by_id_indexed(row3), Some(Indexed::new(row3, (3, 4))));
     }
 
     #[test]
