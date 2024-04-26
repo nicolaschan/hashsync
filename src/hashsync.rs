@@ -25,6 +25,11 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
         }
     }
 
+    pub fn keys(&self) -> Vec<RowId> {
+        let rows_guard = self.rows.read().unwrap();
+        rows_guard.keys().cloned().collect()
+    }
+
     pub fn by_id(&self, id: RowId) -> Option<RowT> {
         let rows_guard = self.rows.read().unwrap();
         rows_guard.get(&id).cloned()
@@ -171,6 +176,23 @@ mod tests {
         assert!(rows.contains(&(1, 2)));
         let rows = index.get_values(&(row_id, 2));
         assert_eq!(rows.len(), 0);
+    }
+
+    #[test]
+    fn keys() {
+        let mut hs = HashSync::new();
+        let row_to_delete = hs.insert((1, 2));
+        hs.insert((1, 3));
+        hs.insert((3, 4));
+
+        let keys = hs.keys();
+        assert_eq!(keys.len(), 3);
+        assert!(keys.contains(&RowId::new(0)));
+        assert!(keys.contains(&RowId::new(1)));
+        assert!(keys.contains(&RowId::new(2)));
+
+        hs.delete(row_to_delete);
+        assert!(!hs.keys().contains(&row_to_delete));
     }
 
     #[test]
