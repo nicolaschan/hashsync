@@ -1,8 +1,9 @@
 use std::{
-    collections::{HashMap, HashSet},
     hash::Hash,
     sync::{Arc, RwLock},
 };
+
+use fxhash::{FxHashMap, FxHashSet};
 
 use crate::id::{Indexed, RowId};
 
@@ -25,18 +26,18 @@ pub trait Indexable<ValueT> {
 
 pub struct Index<KeyT, ValueT> {
     index_function: Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>,
-    index: HashMap<KeyT, HashSet<RowId>>,
+    index: FxHashMap<KeyT, FxHashSet<RowId>>,
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
     pub fn new(index_function: Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>) -> Self {
         Index {
             index_function,
-            index: HashMap::new(),
+            index: FxHashMap::default(),
         }
     }
 
-    pub fn get(&self, key: &KeyT) -> HashSet<RowId> {
+    pub fn get(&self, key: &KeyT) -> FxHashSet<RowId> {
         self.index.get(key).cloned().unwrap_or_default()
     }
 
@@ -46,7 +47,7 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
 
     pub fn into_read_write(
         self,
-        rows: Arc<RwLock<HashMap<RowId, ValueT>>>,
+        rows: Arc<RwLock<FxHashMap<RowId, ValueT>>>,
     ) -> (IndexRead<KeyT, ValueT>, IndexWrite<KeyT, ValueT>) {
         let index = Arc::new(RwLock::new(self));
         (IndexRead::new(rows, index.clone()), IndexWrite::new(index))
@@ -57,10 +58,7 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, Valu
     fn insert(&mut self, row: Indexed<ValueT>) -> IndexId {
         let keys = (self.index_function)(&row);
         for key in keys {
-            self.index
-                .entry(key)
-                .or_insert(HashSet::new())
-                .insert(row.id());
+            self.index.entry(key).or_default().insert(row.id());
         }
         IndexId::new(0)
     }
@@ -79,13 +77,13 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, Valu
 }
 
 pub struct IndexRead<KeyT, ValueT> {
-    rows: Arc<RwLock<HashMap<RowId, ValueT>>>,
+    rows: Arc<RwLock<FxHashMap<RowId, ValueT>>>,
     index: Arc<RwLock<Index<KeyT, ValueT>>>,
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> IndexRead<KeyT, ValueT> {
     pub fn new(
-        rows: Arc<RwLock<HashMap<RowId, ValueT>>>,
+        rows: Arc<RwLock<FxHashMap<RowId, ValueT>>>,
         index: Arc<RwLock<Index<KeyT, ValueT>>>,
     ) -> Self {
         IndexRead { rows, index }

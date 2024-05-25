@@ -1,9 +1,10 @@
 use std::{
     cmp::max,
-    collections::HashMap,
     hash::Hash,
     sync::{Arc, RwLock},
 };
+
+use fxhash::FxHashMap;
 
 use crate::{
     id::{Indexed, RowId},
@@ -11,7 +12,7 @@ use crate::{
 };
 
 pub struct HashSync<'a, RowT> {
-    rows: Arc<RwLock<HashMap<RowId, RowT>>>,
+    rows: Arc<RwLock<FxHashMap<RowId, RowT>>>,
     next_id: RowId,
     indexes: Vec<Box<dyn Indexable<RowT> + 'a>>,
 }
@@ -19,7 +20,7 @@ pub struct HashSync<'a, RowT> {
 impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn new() -> Self {
         HashSync {
-            rows: Arc::new(RwLock::new(HashMap::new())),
+            rows: Arc::new(RwLock::new(FxHashMap::default())),
             next_id: RowId::new(0),
             indexes: Vec::new(),
         }
