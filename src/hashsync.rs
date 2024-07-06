@@ -11,13 +11,13 @@ use crate::{
     index::{Index, IndexRead, Indexable},
 };
 
-pub struct HashSync<'a, RowT> {
+pub struct HashSync<RowT> {
     rows: Arc<RwLock<FxHashMap<RowId, RowT>>>,
     next_id: RowId,
-    indexes: Vec<Box<dyn Indexable<RowT> + 'a>>,
+    indexes: Vec<Box<dyn Indexable<RowT>>>,
 }
 
-impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
+impl<RowT: Clone + 'static> HashSync<RowT> {
     pub fn new() -> Self {
         HashSync {
             rows: Arc::new(RwLock::new(FxHashMap::default())),
@@ -76,7 +76,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn index<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&RowT) -> IndexKeyT + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'a,
+        IndexKeyT: PartialEq + Eq + Hash + 'static,
     {
         let index_many_fn = move |row: &RowT| vec![index_fn(row)];
         self.index_many(index_many_fn)
@@ -88,7 +88,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     ) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&RowT) -> Vec<IndexKeyT> + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'a,
+        IndexKeyT: PartialEq + Eq + Hash + 'static,
     {
         let index_id_many_fn = move |indexed: &Indexed<RowT>| index_fn(indexed.value());
         self.index_id_many(index_id_many_fn)
@@ -97,7 +97,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn index_id<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&Indexed<RowT>) -> IndexKeyT + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'a,
+        IndexKeyT: PartialEq + Eq + Hash + 'static,
     {
         let index_many_fn = move |indexed: &Indexed<RowT>| vec![index_fn(indexed)];
         self.index_id_many(index_many_fn)
@@ -109,7 +109,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     ) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&Indexed<RowT>) -> Vec<IndexKeyT> + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'a,
+        IndexKeyT: PartialEq + Eq + Hash + 'static,
     {
         let mut index = Index::new(Box::new(index_fn));
         let rows_guard = self.rows.read().unwrap();
