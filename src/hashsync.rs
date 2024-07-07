@@ -13,6 +13,12 @@ pub struct HashSync<RowT> {
     indexes: Vec<Box<dyn Indexable<RowT>>>,
 }
 
+impl<RowT: Clone + 'static> Default for HashSync<RowT> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<RowT: Clone + 'static> HashSync<RowT> {
     pub fn new() -> Self {
         HashSync {
