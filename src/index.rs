@@ -25,13 +25,15 @@ pub trait Indexable<ValueT> {
     fn delete(&mut self, row: &Indexed<ValueT>);
 }
 
+pub type IndexFunction<KeyT, ValueT> = Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>;
+
 pub struct Index<KeyT, ValueT> {
-    index_function: Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>,
+    index_function: IndexFunction<KeyT, ValueT>,
     index: FxHashMap<KeyT, FxHashSet<RowId>>,
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
-    pub fn new(index_function: Box<dyn Fn(&Indexed<ValueT>) -> Vec<KeyT>>) -> Self {
+    pub fn new(index_function: IndexFunction<KeyT, ValueT>) -> Self {
         Index {
             index_function,
             index: FxHashMap::default(),
