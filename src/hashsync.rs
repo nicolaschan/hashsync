@@ -7,19 +7,19 @@ use crate::{
     index::{Index, IndexRead, Indexable},
 };
 
-pub struct HashSync<RowT> {
+pub struct HashSync<'a, RowT> {
     rows: Arc<DashMap<RowId, RowT>>,
     next_id: RowId,
-    indexes: Vec<Box<dyn Indexable<RowT>>>,
+    indexes: Vec<Box<dyn Indexable<RowT> + 'a>>,
 }
 
-impl<RowT: Clone + 'static> Default for HashSync<RowT> {
+impl<'a, RowT: Clone + 'a> Default for HashSync<'a, RowT> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<RowT: Clone + 'static> HashSync<RowT> {
+impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn new() -> Self {
         HashSync {
             rows: Arc::new(DashMap::default()),
@@ -110,7 +110,7 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
     ) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&Indexed<RowT>) -> Vec<IndexKeyT> + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
         let mut index = Index::new(Box::new(index_fn));
         for row in self.rows.iter() {
