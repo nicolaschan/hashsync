@@ -77,7 +77,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn index<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&RowT) -> IndexKeyT + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
         let index_many_fn = move |row: &RowT| vec![index_fn(row)];
         self.index_many(index_many_fn)
@@ -89,7 +89,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     ) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&RowT) -> Vec<IndexKeyT> + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
         let index_id_many_fn = move |indexed: &Indexed<RowT>| index_fn(indexed.value());
         self.index_id_many(index_id_many_fn)
@@ -98,7 +98,7 @@ impl<'a, RowT: Clone + 'a> HashSync<'a, RowT> {
     pub fn index_id<IndexKeyT, IndexFn>(&mut self, index_fn: IndexFn) -> IndexRead<IndexKeyT, RowT>
     where
         IndexFn: Fn(&Indexed<RowT>) -> IndexKeyT + 'static,
-        IndexKeyT: PartialEq + Eq + Hash + 'static,
+        IndexKeyT: PartialEq + Eq + Hash + 'a,
     {
         let index_many_fn = move |indexed: &Indexed<RowT>| vec![index_fn(indexed)];
         self.index_id_many(index_many_fn)
