@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use dashmap::DashMap;
 use fxhash::{FxHashMap, FxHashSet};
 
 use crate::id::{Indexed, RowId};
@@ -47,7 +48,7 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
 
     pub fn into_read_write(
         self,
-        rows: Arc<RwLock<FxHashMap<RowId, ValueT>>>,
+        rows: Arc<DashMap<RowId, ValueT>>,
     ) -> (IndexRead<KeyT, ValueT>, IndexWrite<KeyT, ValueT>) {
         let index = Arc::new(RwLock::new(self));
         (IndexRead::new(rows, index.clone()), IndexWrite::new(index))
@@ -77,27 +78,23 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, Valu
 }
 
 pub struct IndexRead<KeyT, ValueT> {
-    rows: Arc<RwLock<FxHashMap<RowId, ValueT>>>,
+    rows: Arc<DashMap<RowId, ValueT>>,
     index: Arc<RwLock<Index<KeyT, ValueT>>>,
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> IndexRead<KeyT, ValueT> {
-    pub fn new(
-        rows: Arc<RwLock<FxHashMap<RowId, ValueT>>>,
-        index: Arc<RwLock<Index<KeyT, ValueT>>>,
-    ) -> Self {
+    pub fn new(rows: Arc<DashMap<RowId, ValueT>>, index: Arc<RwLock<Index<KeyT, ValueT>>>) -> Self {
         IndexRead { rows, index }
     }
 
     pub fn get(&self, key: &KeyT) -> Vec<Indexed<ValueT>> {
-        let rows_guard = self.rows.read().unwrap();
         let index_guard = self.index.read().unwrap();
 
         let row_ids = index_guard.get(key);
         row_ids
             .iter()
             .filter_map(|id| {
-                let row = rows_guard.get(id);
+                let row = self.rows.get(id);
                 if let Some(value) = row {
                     let value_clone = value.clone();
                     return Some(Indexed::new(*id, value_clone));

@@ -17,7 +17,7 @@ pub struct Indexed<T> {
     value: T,
 }
 
-impl<'a, T> Indexed<T> {
+impl<T> Indexed<T> {
     pub fn new(id: RowId, value: T) -> Self {
         Indexed { id, value }
     }

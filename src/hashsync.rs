@@ -1,10 +1,6 @@
-use std::{
-    cmp::max,
-    hash::Hash,
-    sync::{Arc, RwLock},
-};
+use std::{cmp::max, hash::Hash, sync::Arc};
 
-use fxhash::FxHashMap;
+use dashmap::DashMap;
 
 use crate::{
     id::{Indexed, RowId},
@@ -12,7 +8,7 @@ use crate::{
 };
 
 pub struct HashSync<RowT> {
-    rows: Arc<RwLock<FxHashMap<RowId, RowT>>>,
+    rows: Arc<DashMap<RowId, RowT>>,
     next_id: RowId,
     indexes: Vec<Box<dyn Indexable<RowT>>>,
 }
@@ -20,20 +16,18 @@ pub struct HashSync<RowT> {
 impl<RowT: Clone + 'static> HashSync<RowT> {
     pub fn new() -> Self {
         HashSync {
-            rows: Arc::new(RwLock::new(FxHashMap::default())),
+            rows: Arc::new(DashMap::default()),
             next_id: RowId::new(0),
             indexes: Vec::new(),
         }
     }
 
     pub fn keys(&self) -> Vec<RowId> {
-        let rows_guard = self.rows.read().unwrap();
-        rows_guard.keys().cloned().collect()
+        self.rows.iter().map(|r| *r.key()).collect()
     }
 
     pub fn by_id(&self, id: RowId) -> Option<RowT> {
-        let rows_guard = self.rows.read().unwrap();
-        rows_guard.get(&id).cloned()
+        self.rows.get(&id).map(|r| r.value().clone())
     }
 
     pub fn by_id_indexed(&self, id: RowId) -> Option<Indexed<RowT>> {
@@ -48,23 +42,23 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
     }
 
     fn insert_at(&mut self, id: RowId, row: RowT) {
-        let mut rows_guard = self.rows.write().unwrap();
         let indexed = Indexed::new(id, row);
         for index in self.indexes.iter_mut() {
             index.insert(&indexed);
         }
-        rows_guard.insert(id, indexed.into_value());
+        self.rows.insert(id, indexed.into_value());
     }
 
-    pub fn delete(&mut self, id: RowId) {
-        let mut rows_guard = self.rows.write().unwrap();
-        let row = rows_guard.remove(&id);
+    pub fn delete(&mut self, id: RowId) -> Option<RowT> {
+        let row = self.rows.remove(&id);
         if let Some(row) = row {
+            let indexed = Indexed::new(id, row.1);
             for index in self.indexes.iter_mut() {
-                index.delete(&Indexed::new(id, row.clone()));
+                index.delete(&indexed);
             }
+            return Some(indexed.into_value());
         }
-        rows_guard.remove(&id);
+        None
     }
 
     pub fn replace(&mut self, id: RowId, row: RowT) {
@@ -113,9 +107,8 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
         IndexKeyT: PartialEq + Eq + Hash + 'static,
     {
         let mut index = Index::new(Box::new(index_fn));
-        let rows_guard = self.rows.read().unwrap();
-        for row in rows_guard.iter() {
-            let indexed = Indexed::new(*row.0, row.1.clone());
+        for row in self.rows.iter() {
+            let indexed = Indexed::new(*row.key(), row.value().clone());
             index.insert(&indexed);
         }
         let (index_read, index_write) = index.into_read_write(self.rows.clone());
