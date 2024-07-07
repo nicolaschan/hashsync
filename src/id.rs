@@ -29,4 +29,8 @@ impl<'a, T> Indexed<T> {
     pub fn value(&self) -> &T {
         &self.value
     }
+
+    pub fn into_value(self) -> T {
+        self.value
+    }
 }

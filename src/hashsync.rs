@@ -49,10 +49,11 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
 
     fn insert_at(&mut self, id: RowId, row: RowT) {
         let mut rows_guard = self.rows.write().unwrap();
+        let indexed = Indexed::new(id, row);
         for index in self.indexes.iter_mut() {
-            index.insert(Indexed::new(id, row.clone()));
+            index.insert(&indexed);
         }
-        rows_guard.insert(id, row);
+        rows_guard.insert(id, indexed.into_value());
     }
 
     pub fn delete(&mut self, id: RowId) {
@@ -60,7 +61,7 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
         let row = rows_guard.remove(&id);
         if let Some(row) = row {
             for index in self.indexes.iter_mut() {
-                index.delete(Indexed::new(id, row.clone()));
+                index.delete(&Indexed::new(id, row.clone()));
             }
         }
         rows_guard.remove(&id);
@@ -114,7 +115,8 @@ impl<RowT: Clone + 'static> HashSync<RowT> {
         let mut index = Index::new(Box::new(index_fn));
         let rows_guard = self.rows.read().unwrap();
         for row in rows_guard.iter() {
-            index.insert(Indexed::new(*row.0, row.1.clone()));
+            let indexed = Indexed::new(*row.0, row.1.clone());
+            index.insert(&indexed);
         }
         let (index_read, index_write) = index.into_read_write(self.rows.clone());
         self.indexes.push(Box::new(index_write));

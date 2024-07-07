@@ -20,8 +20,8 @@ impl IndexId {
 }
 
 pub trait Indexable<ValueT> {
-    fn insert(&mut self, row: Indexed<ValueT>) -> IndexId;
-    fn delete(&mut self, row: Indexed<ValueT>);
+    fn insert(&mut self, row: &Indexed<ValueT>) -> IndexId;
+    fn delete(&mut self, row: &Indexed<ValueT>);
 }
 
 pub struct Index<KeyT, ValueT> {
@@ -55,16 +55,16 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT: Clone> Index<KeyT, ValueT> {
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for Index<KeyT, ValueT> {
-    fn insert(&mut self, row: Indexed<ValueT>) -> IndexId {
-        let keys = (self.index_function)(&row);
+    fn insert(&mut self, row: &Indexed<ValueT>) -> IndexId {
+        let keys = (self.index_function)(row);
         for key in keys {
             self.index.entry(key).or_default().insert(row.id());
         }
         IndexId::new(0)
     }
 
-    fn delete(&mut self, row: Indexed<ValueT>) {
-        let keys = (self.index_function)(&row);
+    fn delete(&mut self, row: &Indexed<ValueT>) {
+        let keys = (self.index_function)(row);
         for key in keys {
             if let Some(set) = self.index.get_mut(&key) {
                 set.remove(&row.id());
@@ -131,11 +131,11 @@ impl<KeyT: PartialEq + Eq + Hash, ValueT> IndexWrite<KeyT, ValueT> {
 }
 
 impl<KeyT: PartialEq + Eq + Hash, ValueT> Indexable<ValueT> for IndexWrite<KeyT, ValueT> {
-    fn insert(&mut self, row: Indexed<ValueT>) -> IndexId {
+    fn insert(&mut self, row: &Indexed<ValueT>) -> IndexId {
         self.index.write().unwrap().insert(row)
     }
 
-    fn delete(&mut self, row: Indexed<ValueT>) {
+    fn delete(&mut self, row: &Indexed<ValueT>) {
         self.index.write().unwrap().delete(row)
     }
 }
